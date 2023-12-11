@@ -1,0 +1,67 @@
+import uuid
+import boto3
+import json
+import logging
+import urllib
+from opensearchpy import OpenSearch, RequestsHttpConnection
+import time
+
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
+rekognition = boto3.client('rekognition')
+s3Client = boto3.client('s3')
+
+os = OpenSearch(
+				hosts=[{'host': 'search-photos-zrgqb53ljkhbjmzzpntn43poli.us-east-1.es.amazonaws.com','port': 443}], 
+				http_auth=('user', 'pass?'), 
+				use_ssl = True, 
+				verify_certs=True, 
+				connection_class=RequestsHttpConnection
+		)
+		
+def get_images_from_es(labels):
+    response = []
+    for label in labels:
+        ret = os.search({"query": {"match": {"labels": label}}})
+        images = ret['hits']['hits']
+        for image in images:
+            response.append(image['_source'])
+    return response
+
+def lambda_handler(event, context):
+    lex_client = boto3.client('lexv2-runtime')
+    user_input = event["queryStringParameters"]["q"]
+    bot_id = "DLFUDCCOVR"  # Replace with your Lex V2 bot ID
+    bot_alias_id = "TSTALIASID"  # Replace with your Lex V2 bot alias ID
+    session_id = str(uuid.uuid4())
+
+    lex_response = lex_client.recognize_text(
+        botId=bot_id,
+        botAliasId=bot_alias_id,
+        localeId="en_US",
+        sessionId=session_id,
+        text=user_input
+    )
+    keys = []
+    
+    for  key in ['key1', 'key2']:
+
+        if lex_response["sessionState"]["intent"]["slots"][key]:
+            key1_interpreted_value = lex_response["sessionState"]["intent"]["slots"][key]["value"]["interpretedValue"]
+            keys.append(key1_interpreted_value)
+    
+    response = get_images_from_es(keys)
+
+
+    
+
+    # Prepare the response to return to the client
+    return {
+        'headers': {
+            'Access-Control-Allow-Headers' : '*',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'OPTIONS,POST,GET'
+            }, 
+        'statusCode': 200,
+        'body': json.dumps(response)
+    }
