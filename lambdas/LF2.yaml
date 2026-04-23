@@ -12,7 +12,7 @@ rekognition = boto3.client('rekognition')
 s3Client = boto3.client('s3')
 
 os = OpenSearch(
-				hosts=[{'host': 'search-photos-zrgqb53ljkhbjmzzpntn43poli.us-east-1.es.amazonaws.com','port': 443}], 
+				hosts=[{'host': 'search-photos-zrg53ljeeli.us-east-1.es.amazonaws.com','port': 443}], 
 				http_auth=('user', 'pass?'), 
 				use_ssl = True, 
 				verify_certs=True, 
